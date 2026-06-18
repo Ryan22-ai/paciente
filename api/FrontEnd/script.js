@@ -1,4 +1,4 @@
-const API_URL = "https://paciente-joyh.onrender.com/api/pacientes"; // <-- ALTERADO PARA O SEU BACKEND NO RENDER
+const API_URL = "https://paciente-joyh.onrender.com/api/pacientes/"; // <-- Adicionada a barra no final para evitar redirecionamento 405
 
 class AnimacoesAnimeStyle {
     constructor() {
@@ -18,7 +18,6 @@ class AnimacoesAnimeStyle {
 
         this.animarTituloAnimeJS();
         this.animarInterfaceInicial();
-        this.configurarMouse3d();
     }
 
     animarTituloAnimeJS() {
@@ -137,6 +136,36 @@ class GerenciadorPacientes {
         }
     }
 
+    // ================= FUNÇÃO DE ENVIAR FORMULÁRIO (POST) ADICIONADA/CORRIGIDA =================
+    async enviarFormulario(e) {
+        e.preventDefault();
+
+        // Captura os dados dos inputs do seu formulário HTML dinamicamente
+        const formData = new FormData(this.formulario);
+        const dadosPaciente = Object.fromEntries(formData.entries());
+
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dadosPaciente)
+            });
+
+            if (res.ok) {
+                this.exibirMensagem("Paciente cadastrado com sucesso!", "sucesso");
+                this.formulario.reset();
+                this.carregarPacientes(); // Atualiza a tabela na tela
+            } else {
+                this.exibirMensagem("Erro ao cadastrar paciente.", "erro");
+            }
+        } catch (error) {
+            console.error(error);
+            this.exibirMensagem("Erro na comunicação com o servidor.", "erro");
+        }
+    }
+
     filtrarPacientes() {
         const termo = this.buscaInput?.value.toLowerCase().trim() || "";
 
@@ -174,7 +203,6 @@ class GerenciadorPacientes {
         }
     }
 
-    // ================= CONTADOR CORRIGIDO =================
     atualizarContador() {
         if (!this.contador) return;
 
@@ -189,19 +217,15 @@ class GerenciadorPacientes {
         }
     }
 
-    // ================= PDF CORRIGIDO =================
     async gerarRelatorioPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-
         const data = new Date().toLocaleDateString('pt-BR');
 
         doc.setFontSize(16);
         doc.text("Relatório de Pacientes", 105, 20, { align: "center" });
-
         doc.setFontSize(10);
         doc.text(`Gerado em: ${data}`, 105, 28, { align: "center" });
-
         doc.line(15, 35, 195, 35);
 
         const headers = ["Nome", "CPF", "Telefone", "Cidade/UF", "CEP"];
@@ -209,15 +233,12 @@ class GerenciadorPacientes {
         const widths = [35, 35, 40, 30, 20];
 
         let y = 45;
-
         doc.setFontSize(9);
-
         doc.setFillColor(79, 70, 229);
         doc.setTextColor(255);
         doc.rect(15, y - 6, 180, 8, 'F');
 
         headers.forEach((h, i) => doc.text(h, x[i], y));
-
         doc.setTextColor(0);
         y += 10;
 
@@ -249,14 +270,12 @@ class GerenciadorPacientes {
         });
 
         doc.text("Sistema Clínica Médica", 105, 285, { align: "center" });
-
         doc.save(`pacientes_${data.replace(/\//g, '-')}.pdf`);
         this.exibirMensagem("PDF gerado!", "sucesso");
     }
 
     renderizarTabela() {
         this.filtrarPacientes();
-
         const page = this.obterPacientesPagina();
 
         if (!page.length) {
@@ -266,7 +285,6 @@ class GerenciadorPacientes {
         }
 
         let html = "";
-
         page.forEach(p => {
             html += `
             <div class="tabela-linha">
@@ -282,7 +300,6 @@ class GerenciadorPacientes {
         });
 
         this.tabelaPacientes.innerHTML = html;
-
         this.atualizarContador();
         this.atualizarControlesPaginacao();
         this.animacoes.animarLinhasTabela();
@@ -300,13 +317,29 @@ class GerenciadorPacientes {
 
     formatarTelefone(v) {
         const n = v.replace(/\D/g, "");
-        return n.length === 11
-            ? n.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")
-            : v;
+        return n.length === 11 ? n.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3") : v;
     }
 
     formatarCep(v) {
         return v.replace(/\D/g, "").replace(/(\d{5})(\d{3})/, "$1-$2");
+    }
+
+    // Caso precise implementar a busca por CEP
+    async buscarCep() {
+        const cepInput = document.getElementById('cep');
+        const cep = cepInput?.value.replace(/\D/g, "");
+        if (cep?.length === 8) {
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const data = await res.json();
+                if (!data.erro) {
+                    if (document.getElementById('cidade')) document.getElementById('cidade').value = data.localidade;
+                    if (document.getElementById('estado')) document.getElementById('estado').value = data.uf;
+                }
+            } catch (e) {
+                console.error("Erro ao buscar CEP", e);
+            }
+        }
     }
 }
 
