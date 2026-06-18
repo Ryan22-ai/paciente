@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8080/api/pacientes";
+const API_URL = "https://paciente-joyh.onrender.com/api/pacientes"; // <-- ALTERADO PARA O SEU BACKEND NO RENDER
 
 class AnimacoesAnimeStyle {
     constructor() {
